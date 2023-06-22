@@ -1,0 +1,149 @@
+version: '3.7'
+services:
+########## Services ##########
+
+  redis-cache:
+    image: redis:6.2-alpine
+    container_name: redis-cache
+    restart: always
+    entrypoint: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    expose:
+      - "6379"
+    networks:
+        - api
+    volumes:
+      - cache:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+  mysql-db:
+    image: mysql
+    container_name: mysqldb
+    restart: always
+    expose:
+      - "3306"
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./services/db:/docker-entrypoint-initdb.d
+      - mysqldata:/var/lib/mysql
+    networks:
+      - api
+
+  phpmyadmin:
+    depends_on:
+      - mysql-db
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    expose:
+      - "80"
+    environment:
+      PMA_HOSTS: mysql-db
+    networks:
+      - api
+      - proxy
+
+  nginx-proxy:
+    depends_on:
+      - api-app
+      - front-app
+    image: nginx:latest
+    container_name: nginx-proxy
+    restart: always
+    volumes:
+      - ./services/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./services/nginx/ssl/cert.crt:/usr/local/nginx/ssl/cert.crt:ro
+      - ./services/nginx/ssl/cert.key:/usr/local/nginx/ssl/cert.key:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - proxy
+    links:
+      - api-app
+      - front-app
+
+  mailhog:
+    container_name: mailhog
+    image: mailhog/mailhog:latest
+    restart: always
+    expose:
+      - "8025"
+    networks:
+      - proxy
+    logging:
+      driver: none # disable saving logs
+
+########## APPS ##########
+
+  api-app:
+    depends_on:
+      - mysql-db
+      - redis-cache
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: api-app
+    restart: always
+    expose:
+      - "3000"
+    environment:
+      - PORT=${NODE_API_PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - CLIENT_API_BASE_URL=${CLIENT_API_BASE_URL}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_OPERATORSALIASES=${MYSQL_OPERATORSALIASES}
+      - MYSQL_DIALECT=${MYSQL_DIALECT}
+      - MYSQL_MAX=${MYSQL_MAX}
+      - MYSQL_MIN=${MYSQL_MIN}
+      - MYSQL_ACQUIRE=${MYSQL_ACQUIRE}
+      - MYSQL_IDLE=${MYSQL_IDLE}
+      - SEQUELIZE_LOG=0
+      - TZ=Europe/Lisbon
+    command: npm run dev
+    volumes:
+      - ./api/src:/usr/src/app/src
+      - ./api/__tests__:/usr/src/app/__tests__
+      - ./api/jest.config.js:/usr/src/app/jest.config.js
+    networks:
+      - api
+      - proxy
+
+  front-app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: front-app
+    restart: always
+    expose:
+      - "3002"
+    command: npm start
+    environment:
+      REACT_APP_API_URL: http://api.localhost
+    volumes:
+      - ./frontend/src:/usr/src/app/src
+    networks:
+      - frontend
+      - proxy
+
+########## Volumes ##########
+
+volumes:
+  cache:
+  mysqldata:
+
+########## Networks ##########
+
+networks:
+  api:
+  frontend:
+  proxy:
