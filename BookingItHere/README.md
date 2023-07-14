@@ -8,6 +8,9 @@ A plataforma web será capaz de gerir informações sobre alojamentos, incluindo
    docker
    docker compose
    ```
+# Screenshots
+
+https://github.com/L-Anjo/BookingItNodeReact/blob/main/BookingItHere/1.PNG
 
 # Build
 
