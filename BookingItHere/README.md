@@ -10,7 +10,9 @@ A plataforma web será capaz de gerir informações sobre alojamentos, incluindo
    ```
 # Screenshots
 
-<img src="https://github.com/L-Anjo/BookingItNodeReact/blob/main/BookingItHere/1.PNG"  />
+<img src="https://github.com/L-Anjo/BookingItNodeReact/blob/main/BookingItHere/1.PNG"  width="500" />
+<img src="https://github.com/L-Anjo/BookingItNodeReact/blob/main/BookingItHere/2.jpg"  width="500" />
+<img src="https://github.com/L-Anjo/BookingItNodeReact/blob/main/BookingItHere/3.PNG"  width="500" />
 
 # Build
 
